@@ -14,14 +14,14 @@ class ToolTip:
         self.widget.bind("<Enter>", self.show_tip)
         self.widget.bind("<Leave>", self.hide_tip)
 
-    def show_tip(self, event=None):
+    def show_tip(self):
         if self.tipwindow or not self.text:
             return
         x = y = 0
         x = self.widget.winfo_rootx() + 10
         y = self.widget.winfo_rooty() + self.widget.winfo_height() + 5
         self.tipwindow = tw = tk.Toplevel(self.widget)
-        tw.wm_overrideredirect(1)
+        tw.wm_overrideredirect(True)
         tw.wm_geometry("+%d+%d" % (x, y))
         label = ttk.Label(tw, text=self.text, background="yellow", relief="solid", borderwidth=1, padding=2)
         label.pack()
@@ -36,6 +36,11 @@ class ToolTip:
 class SpectraApp(TkinterDnD.Tk):
     def __init__(self):
         super().__init__()
+
+        self.dual_listbox = None
+        self.c_var = None
+        self.b_var = None
+        self.a_var = None
         self.title("Spectra Subtraction App")
         self.geometry("450x540")
 
@@ -71,12 +76,12 @@ class SpectraApp(TkinterDnD.Tk):
             messagebox.showwarning("Invalid File", "Please drop a valid Excel file (.xls, .xlsx)")
 
     def _populate_widgets(self):
-        for var_name in ['a_var', 'c_var']:
-            var = getattr(self, var_name)
-            menu = getattr(self, var_name.replace('_var', '_menu'))["menu"]
-            menu.delete(0, 'end')
-            for name in self.sheet_names:
-                menu.add_command(label=name, command=lambda n=name, v=var: v.set(n))
+        # for var_name in ['a_var', 'c_var']:
+        #     var = getattr(self, var_name)
+        #     menu = getattr(self, var_name.replace('_var', '_menu'))["menu"]
+        #     menu.delete(0, 'end')
+        #     for name in self.sheet_names:
+        #         menu.add_command(label=name, command=lambda n=name, v=var: v.set(n))
         self.a_var.set(self.sheet_names[0])
         self.c_var.set(self.sheet_names[0])
 
@@ -107,7 +112,7 @@ class SpectraApp(TkinterDnD.Tk):
         ttk.Label(self, text="Spectra to subtract (B1, B2, ...):").grid(row=4, column=0, sticky="ne", padx=5)
         self.b_listbox = tk.Listbox(self, selectmode=tk.MULTIPLE, height=5, exportselection=False)
         self.b_listbox.grid(row=4, column=1, sticky="w", padx=5)
-        self.add_tooltip(self.b_listbox, "Select one or more spectra to subtract from spectrum A")
+        self.add_tooltip(self.b_listbox,"Select one or more spectra to subtract from spectrum A")
 
 
         ttk.Label(self, text="Annotate top N peaks:").grid(row=6, column=0, sticky="w", padx=5, pady=5)
@@ -177,7 +182,8 @@ class SpectraApp(TkinterDnD.Tk):
             for name in self.sheet_names:
                 self.b_listbox.insert(tk.END, name)
 
-    def load_data(self, skip_rows, path):
+    @staticmethod
+    def load_data(skip_rows, path):
         xls = pd.ExcelFile(path)
         names = xls.sheet_names
         raw = pd.read_excel(xls, sheet_name=names, skiprows=skip_rows)
