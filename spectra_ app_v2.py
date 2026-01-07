@@ -59,32 +59,6 @@ class SpectraApp(TkinterDnD.Tk):
         self.status_label.grid(
             row=11, column=0, columnspan=2, sticky="we", padx=5, pady=5
         )
-        self._enable_drag_drop()
-
-    # ---- Drag and Drop ----
-    def _enable_drag_drop(self):
-        self.drop_target_register(DND_FILES)
-        self.dnd_bind("<<Drop>>", self._handle_drop)
-
-    def _handle_drop(self, event):
-        self.set_status("Loading file...")
-        path = event.data.strip("{}")
-        if path.lower().endswith((".xls", ".xlsx")):
-            try:
-                skip = int(self.skip_spin.get())
-                self.sheet_names, self.data_dict = self.load_data(skip, path)
-                self._populate_widgets()
-                messagebox.showinfo(
-                    "File Loaded",
-                    f"Loaded {len(self.sheet_names)} sheets from:\n{path}",
-                )
-                self.set_status("Loaded successfully")
-            except Exception as e:
-                messagebox.showerror("Load Error", f"Could not load file:\n{e}")
-        else:
-            messagebox.showwarning(
-                "Invalid File", "Please drop a valid Excel file (.xls, .xlsx)"
-            )
 
     # ---- Widgets ----
     def _create_widgets(self):

@@ -5,7 +5,7 @@ a = Analysis(
     ['spectra_app.py'],
     pathex=[],
     binaries=[],
-    datas=[],
+    datas=[('Spectra.ui', '.')],
     hiddenimports=[],
     hookspath=[],
     hooksconfig={},
