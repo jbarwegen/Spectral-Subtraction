@@ -1,3 +1,27 @@
+"""
+SPECTRA SUBTRACTION APP
+-----------------------
+Description:
+    A GUI application to load Mass Spectrometry data (Excel), visualize spectra,
+    and perform spectral subtraction.
+
+HOW TO RUN:
+    1. Ensure you have Python installed.
+    2. Ensure the file 'Spectra.ui' is in the same folder as this script.
+    3. Install dependencies via terminal/command prompt:
+       pip install pandas matplotlib pyqt5 openpyxl
+    4. Run this script:
+       python spectra_app_NEWGUI.py
+
+INPUT DATA REQUIREMENTS:
+    - Input must be an Excel file (.xlsx).
+    - Sheets must contain these columns: 'm/z', 'Intensity', 'Relative', 'Resolution', 'Noise'.
+"""
+############################
+# This code was developed by Jonathan Barwegen at The Kings University so if you have any questions please reach
+# to Cassidy Vanderschee at The King's University to contact me: cassidy.vanderschee@kingsu.ca
+
+# imports the libraries needed for running the application
 import pandas as pd
 import matplotlib.pyplot as plt
 import os
@@ -5,6 +29,9 @@ import sys
 from PyQt5 import uic, QtWidgets as qw,QtCore as qc
 from typing import Dict, List, Tuple
 
+#IMPORTANT
+# You will need python installed on your computer if you want to run this file
+# You will also need the "Spectra.ui" file in the same folder as 
 
 class SpectraSubtractionApp(qw.QMainWindow):
   @staticmethod
