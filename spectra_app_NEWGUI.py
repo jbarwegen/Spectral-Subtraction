@@ -62,6 +62,8 @@ class SpectraSubtractionApp(qw.QMainWindow):
         self.plotSubtractionButton.clicked.connect(self._on_plot_subtraction_clicked)
         self.graphsWidget.itemActivated.connect(self._on_plot_selected_item)
         self.plotDualButton.clicked.connect(self._on_dual_clicked)
+        # Wire up the new export button
+        #self.exportDataButton.clicked.connect(self._on_export_data_clicked)
 
     ####################
     # ACTIONS
@@ -156,11 +158,13 @@ class SpectraSubtractionApp(qw.QMainWindow):
             self.data_by_sheet[main_name], self.data_by_sheet[sub_name]
         )
         unique_df = self._maybe_normalize(unique_df)
+        self._export_to_excel(unique_df, f"{title.replace(' ', '_')}.xlsx")
         self.plot_spectrum(unique_df, title, n_peaks=n)
 
     def _on_dual_clicked(self) -> None:
         main_name = self.spectraABox.currentText()
         sub_name = self.spectraBBox.currentText()
+        
         if not main_name or not sub_name:
             qw.QMessageBox.warning(
                 self, "Select sheets", "Select both main and subtract sheets."
@@ -171,15 +175,30 @@ class SpectraSubtractionApp(qw.QMainWindow):
             return
 
         n = self._get_peaks_to_annotate()
-        df_main = self._maybe_normalize(self.data_by_sheet[main_name])
-        df_sub = self._maybe_normalize(self.data_by_sheet[sub_name])
+        
+        # 1. Get the original datasets
+        df_main_orig = self._maybe_normalize(self.data_by_sheet[main_name])
+        df_sub_orig = self._maybe_normalize(self.data_by_sheet[sub_name])
+        
         title = f"{main_name} subtracted {sub_name}"
-        df_main = self.compare_dfs(df_main, df_sub)
-        df_main = self._maybe_normalize(df_main)
-        df_sub = self.compare_dfs(df_sub, df_main)
-        df_sub = self._maybe_normalize(df_sub)
-        self.plot_dual_spectrum(df_main, df_sub, title=title, n_peaks=n)
-
+        
+        # 2. Compare against the originals to find unique peaks for both
+        df_main_unique = self.compare_dfs(df_main_orig, df_sub_orig)
+        df_sub_unique = self.compare_dfs(df_sub_orig, df_main_orig)
+        
+        # 3. Normalize the newly subtracted datasets
+        df_main_final = self._maybe_normalize(df_main_unique)
+        df_sub_final = self._maybe_normalize(df_sub_unique)
+        
+        # 4. Export the data if the checkbox is checked
+        self._export_dual_to_excel(
+            df_main_final, main_name, 
+            df_sub_final, sub_name, 
+            f"{title.replace(' ', '_')}_dual.xlsx"
+        )
+        
+        # 5. Plot the graph
+        self.plot_dual_spectrum(df_main_final, df_sub_final, title=title, n_peaks=n)
     @staticmethod
     def load_data(
         skip_rows: int, path: str
@@ -346,24 +365,130 @@ class SpectraSubtractionApp(qw.QMainWindow):
             sep = (cand["m/z"] - m1).abs()
             overlap = sep <= (hw1 + cand["half_width_B"])
             delta_ppm = sep / ((cand["m/z"] + m1) / 2.0) * 1e6
-            return bool((overlap & (delta_ppm <= ppm_tol)).any())
+            return bool((overlap | (delta_ppm <= ppm_tol)).any())
 
         dfA = df1.dropna(subset=["m/z"]).copy()
         mask = dfA.apply(peak_match, axis=1)
         return dfA.loc[~mask].reset_index(drop=True)
 
+    def _export_to_excel(self, df: pd.DataFrame, filename: str) -> None:
+        """Exports the dataframe to an Excel file if the checkbox is ticked."""
+        if not hasattr(self, 'exportDataBox') or not self.exportDataBox.isChecked() or df.empty:
+            return
 
+        filepath = os.path.join(self.save_path or "", filename)
+        try:
+            df.to_excel(filepath, index=False)
+            qw.QMessageBox.information(
+                self, "Data Exported", f"Data saved to:\n{os.path.abspath(filepath)}"
+            )
+        except Exception as e:
+            qw.QMessageBox.warning(self, "Export Error", f"Failed to save Excel file:\n{e}")
+            
+    def _export_dual_to_excel(self, df1: pd.DataFrame, name1: str, df2: pd.DataFrame, name2: str, filename: str) -> None:
+        """Exports two dataframes to separate sheets in an Excel file if the checkbox is ticked."""
+        if not hasattr(self, 'exportDataBox') or not self.exportDataBox.isChecked():
+            return
+
+        filepath = os.path.join(self.save_path or "", filename)
+        try:
+            with pd.ExcelWriter(filepath, engine='openpyxl') as writer:
+                # Excel restricts sheet names to 31 characters, so we slice them just in case
+                df1.to_excel(writer, sheet_name=f"Unique to {name1}"[:31], index=False)
+                df2.to_excel(writer, sheet_name=f"Unique to {name2}"[:31], index=False)
+            
+            qw.QMessageBox.information(
+                self, "Data Exported", f"Dual data saved to:\n{os.path.abspath(filepath)}"
+            )
+        except Exception as e:
+            qw.QMessageBox.warning(self, "Export Error", f"Failed to save dual Excel file:\n{e}")      
 def main() -> int:
     if hasattr(qc.Qt, "AA_EnableHighDpiScaling"):
         qw.QApplication.setAttribute(qc.Qt.AA_EnableHighDpiScaling, True)
     if hasattr(qc.Qt, "AA_UseHighDpiPixmaps"):
         qw.QApplication.setAttribute(qc.Qt.AA_UseHighDpiPixmaps, True)
+        
     app = qw.QApplication(sys.argv)
-
+    
+    # Modern Light Theme Style Sheet
+    modern_style = """
+    QMainWindow {
+        background-color: #F4F5F7;
+    }
+    QLabel {
+        font-size: 12px;
+        color: #172B4D;
+        font-weight: 500;
+    }
+    QPushButton {
+        background-color: #0052CC;
+        color: white;
+        border-radius: 4px;
+        padding: 6px 12px;
+        font-weight: bold;
+        font-size: 12px;
+        border: none;
+    }
+    QPushButton:hover {
+        background-color: #0065FF;
+    }
+    QPushButton:pressed {
+        background-color: #0747A6;
+    }
+    QComboBox, QSpinBox, QLineEdit {
+        background-color: white;
+        border: 1px solid #DFE1E6;
+        border-radius: 3px;
+        padding: 4px;
+        color: #091E42;
+        selection-background-color: #0052CC;
+    }
+    QComboBox:hover, QSpinBox:hover, QLineEdit:hover {
+        border: 1px solid #4C9AFF;
+    }
+    QListWidget {
+        background-color: white;
+        border: 1px solid #DFE1E6;
+        border-radius: 4px;
+        padding: 4px;
+        color: #091E42;
+        outline: none;
+    }
+    QListWidget::item {
+        padding: 4px;
+        border-radius: 2px;
+    }
+    QListWidget::item:hover {
+        background-color: #EBECF0;
+    }
+    QListWidget::item:selected {
+        background-color: #DEEBFF;
+        color: #0052CC;
+        font-weight: bold;
+    }
+    QCheckBox {
+        font-size: 12px;
+        color: #172B4D;
+        spacing: 8px;
+    }
+    QCheckBox::indicator {
+        width: 16px;
+        height: 16px;
+        border: 1px solid #DFE1E6;
+        border-radius: 3px;
+        background-color: white;
+    }
+    QCheckBox::indicator:checked {
+        background-color: #0052CC;
+        border: 1px solid #0052CC;
+        image: url(check.png); /* Optional: add a tiny checkmark icon if you want */
+    }
+    """
+    app.setStyleSheet(modern_style)
+    
     window = SpectraSubtractionApp()
     window.show()
     return app.exec_()
-
 
 if __name__ == "__main__":
     sys.exit(main())
