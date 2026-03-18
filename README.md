@@ -3,13 +3,13 @@ Home of the custom spectral subtraction application used for research at The Kin
 
 This repository hosts the source code and executable for a specialized tool designed to process Orbitrap Mass Spectrometry data. It performs spectral subtraction to compare different samples after they have been ran through the Orbitrap MS
 
-You have two options to run this application
+You have two options to run this application (exe is not up to date right now)
 
 Option 1: Download the .exe and run
 
 or
 
-Option 2: Follow the following instructions
+Option 2: Follow the following instructions (up to date as of 2026-03-18)
 
 Step 1: Install Python If you don't have it, download and install Python from python.org.
 
