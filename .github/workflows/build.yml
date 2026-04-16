@@ -35,7 +35,7 @@ jobs:
           --add-data "Spectra2.ui;." 
           --hidden-import openpyxl 
           --hidden-import matplotlib.backends.backend_svg 
-          spectra_app_Updated.py
+          spectra_app_V2.py
 
       - name: 5. Build with PyInstaller (Mac)
         if: runner.os == 'macOS'
