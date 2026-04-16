@@ -1,0 +1,61 @@
+name: Build Cross-Platform Apps
+
+# This tells the robot to run every time you push code to the main branch
+on:
+  push:
+    branches: ["main"] # Change to "master" if your default branch is called master
+
+jobs:
+  build:
+    # This matrix spins up a Windows server AND a Mac server simultaneously
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [windows-latest, macos-latest]
+
+    steps:
+      - name: 1. Checkout your code
+        uses: actions/checkout@v4
+
+      - name: 2. Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: 3. Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+          pip install pyinstaller
+
+      - name: 4. Build with PyInstaller (Windows)
+        if: runner.os == 'Windows'
+        run: >
+          pyinstaller --noconsole --onefile 
+          --add-data "Spectra2.ui;." 
+          --hidden-import openpyxl 
+          --hidden-import matplotlib.backends.backend_svg 
+          spectra_app_Updated.py
+
+      - name: 5. Build with PyInstaller (Mac)
+        if: runner.os == 'macOS'
+        run: >
+          pyinstaller --windowed --onefile 
+          --add-data "Spectra2.ui:." 
+          --hidden-import openpyxl 
+          --hidden-import matplotlib.backends.backend_svg 
+          spectra_app_V2.py
+
+      - name: 6. Upload Windows .exe
+        if: runner.os == 'Windows'
+        uses: actions/upload-artifact@v4
+        with:
+          name: Windows-Executable
+          path: dist/*.exe
+
+      - name: 7. Upload Mac .app
+        if: runner.os == 'macOS'
+        uses: actions/upload-artifact@v4
+        with:
+          name: Mac-Application
+          path: dist/*.app
